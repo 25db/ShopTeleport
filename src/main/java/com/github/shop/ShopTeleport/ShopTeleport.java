@@ -1,6 +1,6 @@
 package com.github.shop.ShopTeleport;
 
-import io.papermc.paper.threadedregions.scheduler.ScheduledTask;
+
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
@@ -18,7 +18,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
+
 import java.util.concurrent.ConcurrentHashMap;
 
 public class ShopTeleport extends JavaPlugin implements CommandExecutor, TabCompleter {
