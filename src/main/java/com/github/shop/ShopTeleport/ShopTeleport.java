@@ -17,7 +17,6 @@ import org.bukkit.plugin.java.JavaPlugin;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-
 import java.util.concurrent.ConcurrentHashMap;
 
 public class ShopTeleport extends JavaPlugin implements CommandExecutor, TabCompleter {
@@ -39,7 +38,7 @@ public class ShopTeleport extends JavaPlugin implements CommandExecutor, TabComp
 
     @Override
     public void onDisable() {
-        saveShopsToConfigAsync();
+        saveShopsToConfig();
         getLogger().info("ShopTeleport 插件已禁用!");
     }
 
@@ -65,32 +64,23 @@ public class ShopTeleport extends JavaPlugin implements CommandExecutor, TabComp
         getLogger().info("已加载 " + shops.size() + " 个商店");
     }
 
-    /** Folia 兼容：保存到主线程 */
-    private void saveShopsToConfigAsync() {
-        Runnable saveTask = () -> {
-            FileConfiguration config = getConfig();
-            config.set("shops", null); // 清除旧数据
+    private void saveShopsToConfig() {
+        FileConfiguration config = getConfig();
+        config.set("shops", null); // 清除旧数据
 
-            for (Map.Entry<String, ShopLocation> entry : shops.entrySet()) {
-                ShopLocation shop = entry.getValue();
-                String path = "shops." + shop.getName();
-                Location loc = shop.getLocation();
+        for (Map.Entry<String, ShopLocation> entry : shops.entrySet()) {
+            ShopLocation shop = entry.getValue();
+            String path = "shops." + shop.getName();
+            Location loc = shop.getLocation();
 
-                config.set(path + ".world", loc.getWorld().getName());
-                config.set(path + ".x", loc.getX());
-                config.set(path + ".y", loc.getY());
-                config.set(path + ".z", loc.getZ());
-                config.set(path + ".yaw", loc.getYaw());
-                config.set(path + ".pitch", loc.getPitch());
-            }
-            saveConfig();
-        };
-
-        if (isFolia()) {
-            Bukkit.getMainScheduler().execute(this, saveTask, 0L);
-        } else {
-            saveTask.run();
+            config.set(path + ".world", loc.getWorld().getName());
+            config.set(path + ".x", loc.getX());
+            config.set(path + ".y", loc.getY());
+            config.set(path + ".z", loc.getZ());
+            config.set(path + ".yaw", loc.getYaw());
+            config.set(path + ".pitch", loc.getPitch());
         }
+        saveConfig();
     }
 
     @Override
@@ -154,14 +144,7 @@ public class ShopTeleport extends JavaPlugin implements CommandExecutor, TabComp
         }
 
         shops.put(shopName.toLowerCase(), new ShopLocation(shopName, loc));
-
-        // Folia 兼容：保存配置到主线程
-        Runnable saveRunnable = () -> saveShopsToConfigAsync();
-        if (isFolia()) {
-            Bukkit.getMainScheduler().execute(this, saveRunnable, 0L);
-        } else {
-            saveRunnable.run();
-        }
+        saveShopsToConfig();
 
         sender.sendMessage(ChatColor.GRAY + "位置: " + ChatColor.WHITE +
             String.format("%.1f, %.1f, %.1f", loc.getX(), loc.getY(), loc.getZ()) +
@@ -190,14 +173,7 @@ public class ShopTeleport extends JavaPlugin implements CommandExecutor, TabComp
         }
 
         ShopLocation removed = shops.remove(shopName);
-
-        // Folia 兼容：保存配置到主线程
-        Runnable saveRunnable = () -> saveShopsToConfigAsync();
-        if (isFolia()) {
-            Bukkit.getMainScheduler().execute(this, saveRunnable, 0L);
-        } else {
-            saveRunnable.run();
-        }
+        saveShopsToConfig();
         sender.sendMessage(ChatColor.GREEN + "成功删除商店: " + ChatColor.GOLD + removed.getName());
 
         return true;
@@ -246,35 +222,15 @@ public class ShopTeleport extends JavaPlugin implements CommandExecutor, TabComp
         ShopLocation shop = shops.get(shopName);
         Location loc = shop.getLocation();
 
-        // Folia 兼容：TeleportAsync 在 player 所在区域线程上调度
-        // 通过 player.scheduler() 确保在正确的线程执行
-        try {
-            // 使用 player 自己的 RegionScheduler 执行传送
-            player.scheduler().run(player, (plugin, runnable) -> {
-                // 在玩家的区域内执行传送
-                org.bukkit.scheduler.BukkitRunnable task = new org.bukkit.scheduler.BukkitRunnable() {
-                    @Override
-                    public void run() {
-                        if (player.isOnline()) {
-                            player.teleport(loc);
-                            player.sendMessage(ChatColor.GREEN + "已传送到商店: " + ChatColor.GOLD + shop.getName());
-                        } else {
-                            player.sendMessage(ChatColor.RED + "传送失败，玩家已离线!");
-                        }
-                    }
-                };
-                task.run(plugin);
-                return null;
-            }, null, 0L);
-        } catch (Exception e) {
-            // 回退到直接传送
-            if (player.isOnline()) {
-                player.teleport(loc);
-                player.sendMessage(ChatColor.GREEN + "已传送到商店: " + ChatColor.GOLD + shop.getName());
-            }
+        // Folia 兼容的异步传送 - 使用 paper-api 的标准方法
+        // teleportAsync 在 Paper 1.21+ 可用，返回 CompletableFuture
+        if (player.teleportAsync(loc)) {
+            sender.sendMessage(ChatColor.YELLOW + "正在传送到 " + ChatColor.GOLD + shop.getName() + ChatColor.YELLOW + "...");
+        } else {
+            // 回退到同步传送
+            player.teleport(loc);
+            sender.sendMessage(ChatColor.YELLOW + "已传送到 " + ChatColor.GOLD + shop.getName());
         }
-
-        sender.sendMessage(ChatColor.YELLOW + "正在传送到 " + ChatColor.GOLD + shop.getName() + ChatColor.YELLOW + "...");
         return true;
     }
 
@@ -335,16 +291,6 @@ public class ShopTeleport extends JavaPlugin implements CommandExecutor, TabComp
         }
 
         return completions;
-    }
-
-    /** 检测是否为 Folia 服务端 */
-    private boolean isFolia() {
-        try {
-            Class.forName("io.papermc.paper.threadedregions.RegionizedServer");
-            return true;
-        } catch (ClassNotFoundException e) {
-            return false;
-        }
     }
 
     // 内部类：商店位置
