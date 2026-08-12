@@ -63,7 +63,7 @@ public class ShopTeleport extends JavaPlugin implements CommandExecutor, TabComp
                 shops.put(shopName.toLowerCase(), new ShopLocation(shopName, loc));
             }
         }
-        getLogger().info("已加载 " + shops.size() + 个商店");
+        getLogger().info("已加载 " + shops.size() + " 个商店");
     }
 
     private void saveShopsToConfig() {
