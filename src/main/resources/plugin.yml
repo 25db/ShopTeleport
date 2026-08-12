@@ -2,9 +2,10 @@ name: ShopTeleport
 version: 1.0.0
 main: com.github.shop.ShopTeleport.ShopTeleport
 api-version: '1.21.11'
+folia-supported: true
 authors:
   - 25db
-description: A Folia-compatible shop teleport plugin for Minecraft 1.21.1
+description: A Folia-compatible shop teleport plugin for Minecraft 1.21.11
 website: https://github.com/25db/ShopTeleport
 
 commands:
