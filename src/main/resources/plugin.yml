@@ -1,0 +1,25 @@
+name: ShopTeleport
+version: 1.0.0
+main: com.github.shop.ShopTeleport.ShopTeleport
+api-version: '1.21'
+authors:
+  - 25db
+description: A Folia-compatible shop teleport plugin for Minecraft 1.21.1
+website: https://github.com/25db/ShopTeleport
+
+commands:
+  shop:
+    description: Shop teleport command
+    usage: /shop <set|delete|list|tp|help|reload>
+    permission-message: "You do not have permission to use this command."
+    aliases:
+      - shops
+      - shoptp
+
+permissions:
+  shopteleport.admin:
+    description: Allows setting and deleting shops
+    default: op
+  shopteleport.use:
+    description: Allows teleporting to shops
+    default: true

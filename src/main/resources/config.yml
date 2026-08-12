@@ -1,0 +1,6 @@
+# ShopTeleport 配置文件
+# ShopTeleport Configuration File
+
+# 商店数据存储于此 (请勿手动编辑)
+# Shop data is stored here (do not edit manually)
+shops: {}
