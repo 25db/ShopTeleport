@@ -17,6 +17,8 @@ import org.bukkit.plugin.java.JavaPlugin;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+
 import java.util.concurrent.ConcurrentHashMap;
 
 public class ShopTeleport extends JavaPlugin implements CommandExecutor, TabCompleter {
@@ -28,7 +30,6 @@ public class ShopTeleport extends JavaPlugin implements CommandExecutor, TabComp
         saveDefaultConfig();
         loadShops();
 
-        // 注册命令执行器
         getCommand("shop").setExecutor(this);
         getCommand("shop").setTabCompleter(this);
 
@@ -66,7 +67,7 @@ public class ShopTeleport extends JavaPlugin implements CommandExecutor, TabComp
 
     private void saveShopsToConfig() {
         FileConfiguration config = getConfig();
-        config.set("shops", null); // 清除旧数据
+        config.set("shops", null);
 
         for (Map.Entry<String, ShopLocation> entry : shops.entrySet()) {
             ShopLocation shop = entry.getValue();
@@ -116,7 +117,6 @@ public class ShopTeleport extends JavaPlugin implements CommandExecutor, TabComp
     }
 
     private boolean handleSetShop(CommandSender sender, String[] args) {
-        // 检查OP权限
         if (!sender.isOp()) {
             sender.sendMessage(ChatColor.RED + "你没有权限设置商店! 此命令仅限OP使用.");
             return true;
@@ -136,7 +136,6 @@ public class ShopTeleport extends JavaPlugin implements CommandExecutor, TabComp
         String shopName = args[1];
         Location loc = player.getLocation();
 
-        // 检查是否已存在
         if (shops.containsKey(shopName.toLowerCase())) {
             sender.sendMessage(ChatColor.YELLOW + "商店 '" + shopName + "' 已存在，已更新位置!");
         } else {
@@ -154,7 +153,6 @@ public class ShopTeleport extends JavaPlugin implements CommandExecutor, TabComp
     }
 
     private boolean handleDeleteShop(CommandSender sender, String[] args) {
-        // 检查OP权限
         if (!sender.isOp()) {
             sender.sendMessage(ChatColor.RED + "你没有权限删除商店! 此命令仅限OP使用.");
             return true;
@@ -222,15 +220,17 @@ public class ShopTeleport extends JavaPlugin implements CommandExecutor, TabComp
         ShopLocation shop = shops.get(shopName);
         Location loc = shop.getLocation();
 
-        // Folia 兼容的异步传送 - 使用 paper-api 的标准方法
-        // teleportAsync 在 Paper 1.21+ 可用，返回 CompletableFuture
-        if (player.teleportAsync(loc)) {
-            sender.sendMessage(ChatColor.YELLOW + "正在传送到 " + ChatColor.GOLD + shop.getName() + ChatColor.YELLOW + "...");
-        } else {
-            // 回退到同步传送
-            player.teleport(loc);
-            sender.sendMessage(ChatColor.YELLOW + "已传送到 " + ChatColor.GOLD + shop.getName());
-        }
+        // 使用标准 Paper API - teleportAsync 在 Paper 1.21+ 中可用
+        CompletableFuture<Boolean> future = player.teleportAsync(loc);
+        future.thenAccept(success -> {
+            if (success != null && success) {
+                player.sendMessage(ChatColor.GREEN + "已传送到商店: " + ChatColor.GOLD + shop.getName());
+            } else {
+                player.sendMessage(ChatColor.RED + "传送失败，请稍后重试!");
+            }
+        });
+
+        sender.sendMessage(ChatColor.YELLOW + "正在传送到 " + ChatColor.GOLD + shop.getName() + ChatColor.YELLOW + "...");
         return true;
     }
 
